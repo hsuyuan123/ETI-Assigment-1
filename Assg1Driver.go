@@ -5,13 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"net/http"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 )
 
 type Driver struct {
-	ID        string `json:"ID"`
+	DriverId  string `json:"Driver ID"`
 	FirstName string `json:"First Name"`
 	LastName  string `json:"Last Name"`
 	MobileNo  int    `json:"MobileNo"`
@@ -21,6 +24,20 @@ type Driver struct {
 	AccStatus string `json:"AccStatus"`
 }
 
+func main() {
+	router := mux.NewRouter()
+	router.HandleFunc("/api/v1/", home)
+	router.HandleFunc("/api/v1/user", newUser).Methods("GET", "DELETE", "POST", "PATCH", "PUT", "OPTIONS")
+	//Driver
+	router.HandleFunc("/api/v1/driver", Driver)
+	fmt.Println("Listening at port 5001")
+	log.Fatal(http.ListenAndServe(":5001", router))
+	//Trip
+	router.HandleFunc("/api/v1/trip", Trip)
+	fmt.Println("Listening at port 5002")
+	log.Fatal(http.ListenAndServe(":5002", router))
+}
+
 func GetData(db *sql.DB) {
 	results, err := db.Query("select * from Driver")
 	if err != nil {
@@ -28,15 +45,15 @@ func GetData(db *sql.DB) {
 	}
 	for results.Next() {
 		var d Driver
-		err = results.Scan(&d.ID, &d.FirstName, &d.LastName, &d.MobileNo, &d.Email, &d.LicenseNo, &d.VehicleNo, &d.AccStatus)
+		err = results.Scan(&d.DriverId, &d.FirstName, &d.LastName, &d.MobileNo, &d.Email, &d.LicenseNo, &d.VehicleNo, &d.AccStatus)
 		if err != nil {
 			panic(err.Error())
 		}
-		fmt.Println(d.ID, d.FirstName, d.LastName, d.MobileNo, d.Email)
+		fmt.Println(d.DriverId, d.FirstName, d.LastName, d.MobileNo, d.Email)
 	}
 }
 
-func newUser(w http.ResponseWriter, r *http.Request) {
+func newDriver(w http.ResponseWriter, r *http.Request) {
 	var respond Driver
 	body, _ := io.ReadAll(r.Body) //from http.Request
 	err := json.Unmarshal(body, &respond)
@@ -49,26 +66,92 @@ func newUser(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf(err.Error())
 }
 
-func users(w http.ResponseWriter, r *http.Request) {
-	db, _ := sql.Open("mysql", "user:password@tcp(127.0.0.1:3306)/my_db")
-	defer db.Close()
+func driver(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
 
-	results, _ := db.Query("select * from users")
+	if r.Method == "POST" {
+		if body, err := ioutil.ReadAll(r.Body); err == nil {
+			var data User
 
-	var users map[string]User = map[string]User{} //////ADDED
-	for results.Next() {
-		var u User
-		_ = results.Scan(&u.ID, &u.FirstName, &u.LastName, &u.MobileNo, &u.Email, &u.LicenseNo, &u.VehicleNo, &u.AccStatus)
+			if err := json.Unmarshal(body, &data); err == nil {
+				if _, ok := drivers[params["driverid"]]; !ok {
+					fmt.Println(data)
+					drivers[params["driverid"]] = data
 
-		fmt.Println(u)
-		users[u.ID] = u //////ADDED
+					w.WriteHeader(http.StatusAccepted)
+				} else {
+					w.WriteHeader(http.StatusConflict)
+					fmt.Fprintf(w, "Driver ID exist")
+				}
+			} else {
+				fmt.Println(err)
+			}
+		}
+	} else if r.Method == "PUT" {
+		if body, err := ioutil.ReadAll(r.Body); err == nil {
+			var data Driver
+
+			if err := json.Unmarshal(body, &data); err == nil {
+				if _, ok := drivers[params["druverid"]]; ok {
+					fmt.Println(data)
+
+					drivers[params["driverid"]] = data
+					w.WriteHeader(http.StatusAccepted)
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+					fmt.Fprintf(w, "Driver ID does not exist")
+				}
+			} else {
+				fmt.Println(err)
+			}
+		}
+	} else if r.Method == "PATCH" {
+		if body, err := ioutil.ReadAll(r.Body); err == nil {
+			var data map[string]interface{}
+
+			if err := json.Unmarshal(body, &data); err == nil {
+				if orig, ok := driver[params["driverid"]]; ok {
+					fmt.Println(data)
+
+					for k, v := range data {
+						switch k {
+						case "First Name":
+							orig.FirstName = v.(string)
+						case "Last Name":
+							orig.LastName = v.(string)
+						case "Mobile No":
+							orig.MobileNo = int(v.(float64))
+						case "Email":
+							orig.Email = v.(string)
+						}
+					}
+					driver[params["driverid"]] = orig
+					w.WriteHeader(http.StatusAccepted)
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+					fmt.Fprintf(w, "Course ID does not exist")
+				}
+			} else {
+				fmt.Println(err)
+			}
+		}
+		//delete user
+	} else if val, ok := driver[params["driverid"]]; ok {
+		if r.Method == "DELETE" {
+			fmt.Fprintf(w, params["driverid"]+" Deleted")
+			delete(user, params["driverid"])
+		} else {
+			json.NewEncoder(w).Encode(val)
+		}
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "Invalid Driver ID")
 	}
-	json.NewEncoder(w).Encode(users) //////ADDED
 }
 
-func updateUser(db *sql.DB) {
+func updateDriver(db *sql.DB) {
 	var u User
-	result, err := db.Exec("insert into user (firstname, lastname,  mobileno, email)     values(?, ?, ?, ?, ?, ?)", u.FirstName, u.LastName, u.MobileNo, u.Email, &u.LicenseNo, &u.VehicleNo, &u.AccStatus)
+	result, err := db.Exec("insert into driver (firstname, lastname,  mobileno, email, vehicleno, licenseno)     values(?, ?, ?, ?, ?, ?, ?, ?)", u.FirstName, u.LastName, u.MobileNo, u.Email, &u.LicenseNo, &u.VehicleNo, &u.AccStatus)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -79,16 +162,10 @@ func updateUser(db *sql.DB) {
 	}
 }
 
-func deleteUser() {
-	params := mux.Vars(r)
-
-	data, ok := users[params["email"]]
-	if !ok {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "No user found")
-	} else {
-		fmt.Println(data)
-		delete(users, params["email"])
-		fmt.Fprintf(w, "User deleted")
+func delDriver(id string) (int64, error) {
+	result, err := db.Exec("delete from driver where id=?", id)
+	if err != nil {
+		return 0, err
 	}
+	return result.RowsAffected()
 }

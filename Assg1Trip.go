@@ -2,43 +2,62 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 )
+
+// Link to user and driver
+func main() {
+	db, err = sql.Open("mysql", "user:password@tcp(127.0.0.1:3306)/db")
+
+	if err != nil {
+		panic(err.Error())
+	}
+	router := mux.NewRouter()
+	router.HandleFunc("/api/v1/", home)
+	router.HandleFunc("/api/v1/user", newUser).Methods("GET", "DELETE", "POST", "PATCH", "PUT")
+	//User
+	router.HandleFunc("/api/v1/user", User)
+	fmt.Println("Listening at port 5000")
+	log.Fatal(http.ListenAndServe(":5000", router))
+	//Driver
+	router.HandleFunc("/api/v1/driver", Driver)
+	fmt.Println("Listening at port 5001")
+	log.Fatal(http.ListenAndServe(":5001", router))
+	//Trip
+	router.HandleFunc("/api/v1/trip", Trip)
+	fmt.Println("Listening at port 5002")
+	log.Fatal(http.ListenAndServe(":5002", router))
+}
+
 type Trip struct {
-	TripID        string `json:"TripID"`
-	UserID string `json:"User ID"`
-	PickupLoc  string `json:"PickupLoc"`
-	AltPickupLoc  string    `json:"AltPickupLoc"`
-	StartTravelTime     string `json:"StartTravelTime"`
-	DestAddress string `json:"DestAddress"`
-	NoOfPsgr string `json:"NoOfPsgr"`
-	TripStatus string `json:"TripStatus"`
-	CustomerID string `json:"CustomerID"`
+	TripID          string `json:"TripID"`
+	DriverId        string `json:"User ID"`
+	PickupLoc       string `json:"PickupLoc"`
+	AltPickupLoc    string `json:"AltPickupLoc"`
+	StartTravelTime string `json:"StartTravelTime"`
+	DestAddress     string `json:"DestAddress"`
+	NoOfPsgr        string `json:"NoOfPsgr"`
+	TripStatus      string `json:"TripStatus"`
+	CustomerID      string `json:"CustomerID"`
 }
 
-func newTrip(w http.ResponseWriter, r *http.Request) {
-	var respond Trip[]
-	body, _ := io.ReadAll(r.Body) //from http.Request
-	err := json.Unmarshal(body, &respond)
-	//Current User ID
-	fmt.Printf("Pickup Location: %s", respond.PickupLoc)
-	fmt.Printf("Alternate Pickup Location: %s", respond.AltPickupLoc)
-	fmt.Printf("Start Travel Time: %s", respond.StartTravelTime)
-	fmt.Printf("Destination Address: %s", respond.DestAddress)
-	fmt.Printf("Max Number of Passengers: %s", respond.NoOfPsgr)
-	CustomerID = nil
-	fmt.Printf(err.Error())
+func newTrip(id string, t Trip, u User, d Driver) {
+	_, err := db.Exec("insert into trip values(?,?,?,?,?)", id, d.DriverId, t.PickupLoc, t.AltPickupLoc, t.StartTravelTime, t.DestAddress, t.NoOfPsgr, t.TripStatus, u.UserId)
+	if err != nil {
+		panic(err.Error())
+	}
 }
 
-func enrollTrip(w http.ResponseWriter, r *http.Request){
-	//Display all Trips
-	//Allow user to choose one
-	//Looks at user's current trip StartTravelTime to check for clashes
-	//Saves current user id at the trip entry
+func updateTrip(id string, t Trip) {
+	_, err := db.Exec("update course set name=?, intake=?, mingpa=?, maxgpa=? where id=?", t.PickupLoc, t.AltPickupLoc, t.StartTravelTime, t.DestAddress, t.NoOfPsgr, id)
+	if err != nil {
+		panic(err.Error())
+	}
 }
+
+//Enroll by changing userid of trip to id of current logged in user
