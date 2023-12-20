@@ -77,53 +77,6 @@ func main() {
 		}
 	}
 
-/*func console(){
-	fmt.Printf("1. Create New User")
-	fmt.Printf("2. Login")
-	input, _ := reader.ReadString('\n')
-	if input == 1{
-		newUser()
-	} else if input == 2{
-		fmt.Printf("Input Email")
-		input2, _ := reader.ReadString('\n')
-		results, err := db.Query("select * from User")
-		if err != nil {
-			panic(err.Error())
-		}
-		for results.Next() {
-			var u User
-			err = results.Scan(&u.ID, &u.FirstName, &u.LastName, &u.MobileNo, &u.Email, &u.LicenseNo, &u.VehicleNo, &u.AccStatus)
-			if err != nil {
-				panic(err.Error())
-			}
-		}
-		for r in results {
-			if r.Email == input2{
-				fmt.Printf("Hello" + r.FirstName + r.LastName)
-
-			}
-		}
-		//Logged in
-		fmt.Printf("1. Update User")
-		fmt.Printf("2. Delete User")
-		fmt.Printf("3. Enroll in Trip")
-		if r.LicenseNo != nil(
-			fmt.Printf("4. Create Trip")
-		)
-		input3, _ := reader.ReadString('\n')
-		if input3 == 1 {
-			updateUser()
-		} else if input3 == 2 {
-			deleteUser()
-		} else if input3 == 3{
-			enrollTrip()
-		} else if input3 == 4 {
-			newTrip()
-		}	
-	} else {
-		fmt.Printf("Input a valid number.")
-	}
-*/
 	func deleteUser() {
 		var course string
 		fmt.Print("Enter the ID of the user to be deleted: ")
@@ -147,30 +100,32 @@ func main() {
 }
 
 func updateUser() {
-	var course Course
-	var courseID string
-	fmt.Print("Enter the ID of the course to be updated: ")
-	fmt.Scanf("%v", &courseID)
-	fmt.Print("Enter the new name: ")
+	var user User
+	var userID string
+	fmt.Print("Enter the ID of the user to be updated: ")
+	fmt.Scanf("%v", &userID)
+	fmt.Print("Enter the new first name: ")
 	reader := bufio.NewReader(os.Stdin)
 	input, _ := reader.ReadString('\n')
-	course.Name = strings.TrimSpace(input)
-	fmt.Print("Enter the new planned intake number: ")
-	fmt.Scanf("%d", &(course.Intake))
-	fmt.Print("Enter the new minimum GPA: ")
-	fmt.Scanf("%d", &(course.MinGPA))
-	fmt.Print("Enter the new maximum GPA: ")
-	fmt.Scanf("%d", &(course.MaxGPA))
+	course.FirstName = strings.TrimSpace(input)
+	fmt.Print("Enter the new last name: ")
+	reader := bufio.NewReader(os.Stdin)
+	input, _ := reader.ReadString('\n')
+	course.LastName = strings.TrimSpace(input)
+	fmt.Print("Enter the new mobile number: ")
+	fmt.Scanf("%d", &(user.MobileNo))
+	fmt.Print("Enter the new Email: ")
+	fmt.Scanf("%d", &(user.Email))
 
 	postBody, _ := json.Marshal(course)
 
 	client := &http.Client{}
-	if req, err := http.NewRequest(http.MethodPut, "http://localhost:5000/api/v1/courses/"+courseID, bytes.NewBuffer(postBody)); err == nil {
+	if req, err := http.NewRequest(http.MethodPut, "http://localhost:5001/api/v1/drivers/"+driverID, bytes.NewBuffer(postBody)); err == nil {
 		if res, err := client.Do(req); err == nil {
 			if res.StatusCode == 202 {
-				fmt.Println("Course", courseID, "updated successfully")
+				fmt.Println("Driver", driverID, "updated successfully")
 			} else if res.StatusCode == 404 {
-				fmt.Println("Error - course", courseID, "does not exist")
+				fmt.Println("Error - driver", driverID, "does not exist")
 			}
 		} else {
 			fmt.Println(2, err)
@@ -179,3 +134,68 @@ func updateUser() {
 		fmt.Println(3, err)
 	}
 }
+
+func updateDriver() {
+	var driver Driver
+	var driverID string
+	fmt.Print("Enter the ID of the driver to be updated: ")
+	fmt.Scanf("%v", &driverID)
+	fmt.Print("Enter the new first name: ")
+	reader := bufio.NewReader(os.Stdin)
+	input, _ := reader.ReadString('\n')
+	course.FirstName = strings.TrimSpace(input)
+	fmt.Print("Enter the new last name: ")
+	reader := bufio.NewReader(os.Stdin)
+	input, _ := reader.ReadString('\n')
+	course.LastName = strings.TrimSpace(input)
+	fmt.Print("Enter the new mobile number: ")
+	fmt.Scanf("%d", &(driver.MobileNo))
+	fmt.Print("Enter the new Email: ")
+	fmt.Scanf("%d", &(driver.Email))
+	fmt.Print("Enter the new Vehicle Number: ")
+	fmt.Scanf("%d", &(driver.VehicleNo))
+	fmt.Print("Enter the new License Number: ")
+	fmt.Scanf("%d", &(driver.LicenseNo))
+
+	postBody, _ := json.Marshal(course)
+
+	client := &http.Client{}
+	if req, err := http.NewRequest(http.MethodPut, "http://localhost:5000/api/v1/drivers/"+driverID, bytes.NewBuffer(postBody)); err == nil {
+		if res, err := client.Do(req); err == nil {
+			if res.StatusCode == 202 {
+				fmt.Println("Driver", driverID, "updated successfully")
+			} else if res.StatusCode == 404 {
+				fmt.Println("Error - driver", driverID, "does not exist")
+			}
+		} else {
+			fmt.Println(2, err)
+		}
+	} else {
+		fmt.Println(3, err)
+	}
+}
+
+func deleteDriver() {
+	var course string
+	fmt.Print("Enter the ID of the driver to be deleted: ")
+	fmt.Scanf("%v", &driver)
+
+	client := &http.Client{}
+	if req, err := http.NewRequest(http.MethodDelete, "http://localhost:5000/api/v1/driver/"+course, nil); err == nil {
+		if res, err := client.Do(req); err == nil {
+			if res.StatusCode == 200 {
+				fmt.Println("Course", course, "deleted successfully")
+			} else if res.StatusCode == 404 {
+				fmt.Println("Error - course", course, "does not exist")
+			}
+		} else {
+			fmt.Println(2, err)
+		}
+	} else {
+		fmt.Println(3, err)
+	}
+}
+
+//Update trips for driver
+
+//Update trips for users

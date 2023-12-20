@@ -7,8 +7,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strconv"
-	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
@@ -20,8 +18,6 @@ type User struct {
 	LastName  string `json:"Last Name"`
 	MobileNo  int    `json:"MobileNo"`
 	Email     string `json:"Email"`
-	LicenseNo string `json:"LicenseNo"`
-	VehicleNo string `json:"VehicleNo"`
 	AccStatus string `json:"AccStatus"`
 }
 
@@ -39,8 +35,7 @@ func main() {
 	}
 	//defer db.Close()
 	router := mux.NewRouter()
-	router.HandleFunc("/api/v1/", home)
-	router.HandleFunc("/api/v1/user", newUser).Methods("GET", "DELETE", "POST", "PATCH", "PUT", "OPTIONS")
+	router.HandleFunc("/api/v1/users/{userid}", user).Methods("GET", "DELETE", "POST", "PATCH", "PUT", "OPTIONS")
 	//User
 	router.HandleFunc("/api/v1/user", User)
 	fmt.Println("Listening at port 5000")
@@ -51,43 +46,33 @@ func main() {
 	log.Fatal(http.ListenAndServe(":5002", router))
 }
 
-func insertUser(id string, u User) {
-	_, err := db.Exec("insert into user values(?,?,?,?,?)", id, u.FirstName, u.LastName, u.MobileNo, u.Email)
+func insertUser(userid string, u User) {
+	u.AccStatus = "active"
+	_, err := db.Exec("insert into user values(?,?,?,?,?)", userid, u.FirstName, u.LastName, u.MobileNo, u.Email, u.AccStatus)
 	if err != nil {
 		panic(err.Error())
 	}
 }
 
-func updateCourse(id string, c Course) {
-	_, err := db.Exec("update course set name=?, intake=?, mingpa=?, maxgpa=? where id=?", c.Name, c.Intake, c.MinGPA, c.MaxGPA, id)
+func updateUser(userid string, u User) {
+	_, err := db.Exec("update user set firstname=?, lastname=?, mobileno=?, email=? where id=?", u.FirstName, u.LastName, u.MobileNo, u.Email, userid)
 	if err != nil {
 		panic(err.Error())
 	}
 }
 
-func deleteUser(id string) (int64, error) {
-	result, err := db.Exec("delete from course where id=?", id)
+/*func deleteUser(userid string) (int64, error) {
+	result, err := db.Exec("delete from course where id=?", userid)
+	//u.accstatus = "inactive"
+	//Update account status
+	//_, err := db.Exec("update user set accstatus=? where id=?", u.accstatus, userid)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected()
-}
+}*/
 
-func insertUser(id string, u User) {
-	_, err := db.Exec("insert into course values(?,?,?,?,?)", id, u.FirstName, u.LastName, u.MobileNo, u.Email)
-	if err != nil {
-		panic(err.Error())
-	}
-}
-
-func updateUser(id string, u User) {
-	_, err := db.Exec("update user set name=?, intake=?, mingpa=?, maxgpa=? where id=?", u.FirstName, u.LastName, u.MobileNo, u.Email, id)
-	if err != nil {
-		panic(err.Error())
-	}
-}
-
-func user(w http.ResponseWriter, r *http.Request) {
+func users(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
 	if r.Method == "POST" {
@@ -95,9 +80,9 @@ func user(w http.ResponseWriter, r *http.Request) {
 			var data User
 
 			if err := json.Unmarshal(body, &data); err == nil {
-				if _, ok := users[params["userid"]]; !ok {
+				if _, ok := isExist[params["userid"]]; !ok {
 					fmt.Println(data)
-					users[params["userid"]] = data
+					insertUser[params["userid"]] = data
 
 					w.WriteHeader(http.StatusAccepted)
 				} else {
@@ -113,10 +98,10 @@ func user(w http.ResponseWriter, r *http.Request) {
 			var data User
 
 			if err := json.Unmarshal(body, &data); err == nil {
-				if _, ok := users[params["userid"]]; ok {
+				if _, ok := isExist[params["userid"]]; ok {
 					fmt.Println(data)
 
-					users[params["userid"]] = data
+					updateUser[params["userid"]] = data
 					w.WriteHeader(http.StatusAccepted)
 				} else {
 					w.WriteHeader(http.StatusNotFound)
@@ -131,7 +116,7 @@ func user(w http.ResponseWriter, r *http.Request) {
 			var data map[string]interface{}
 
 			if err := json.Unmarshal(body, &data); err == nil {
-				if orig, ok := user[params["userid"]]; ok {
+				if orig, ok := isExist[params["userid"]]; ok {
 					fmt.Println(data)
 
 					for k, v := range data {
@@ -146,18 +131,18 @@ func user(w http.ResponseWriter, r *http.Request) {
 							orig.Email = v.(string)
 						}
 					}
-					user[params["userid"]] = orig
+					updateUser[params["userid"]] = orig
 					w.WriteHeader(http.StatusAccepted)
 				} else {
 					w.WriteHeader(http.StatusNotFound)
-					fmt.Fprintf(w, "Course ID does not exist")
+					fmt.Fprintf(w, "User ID does not exist")
 				}
 			} else {
 				fmt.Println(err)
 			}
 		}
 		//delete user
-	} else if val, ok := user[params["userid"]]; ok {
+	} else if val, ok := isExist[params["userid"]]; ok {
 		if r.Method == "DELETE" {
 			fmt.Fprintf(w, params["userid"]+" Deleted")
 			delete(user, params["userid"])
@@ -167,55 +152,5 @@ func user(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "Invalid User ID")
-	}
-}
-
-func allusers(w http.ResponseWriter, r *http.Request) {
-
-	query := r.URL.Query()
-
-	found := false
-	results := map[string]User{}
-
-	if value := query.Get("q"); len(value) > 0 {
-		for k, v := range users {
-			if strings.Contains(strings.ToLower(v.Name), strings.ToLower(value)) {
-				results[k] = v
-				found = true
-			}
-		}
-
-		if !found {
-			fmt.Fprintf(w, "No user found")
-		} else {
-			json.NewEncoder(w).Encode(struct {
-				Results map[string]User `json:"Search Results"`
-			}{results})
-		}
-	} else if value = query.Get("gpa"); len(value) > 0 {
-		found := false
-		results := map[string]User{}
-		gpa, _ := strconv.Atoi(value)
-
-		for k, v := range user {
-			if gpa <= v.MaxGPA {
-				results[k] = v
-				found = true
-			}
-		}
-
-		if !found {
-			fmt.Fprintf(w, "No course eligible")
-		} else {
-			json.NewEncoder(w).Encode(struct {
-				Results map[string]Course `json:"Eligible course(s)"`
-			}{results})
-		}
-	} else {
-		coursesWrapper := struct {
-			Courses map[string]Course `json:"Courses"`
-		}{courses}
-		json.NewEncoder(w).Encode(coursesWrapper)
-		return
 	}
 }

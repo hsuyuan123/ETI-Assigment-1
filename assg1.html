@@ -1,0 +1,229 @@
+<div><p>
+    <button onclick="javascript:getUsers()">Get all users</button>
+    <button onclick="javascript:createUser()">Create user</button>
+    <button onclick="javascript:getDrivers()">Get all driver</button>
+    <button onclick="javascript:createDriver()">Create drivers</button>
+    <button onclick="javascript:getTrips()">Get all trips</button>
+    <button onclick="javascript:createDriver()">Create trips</button>
+    <p/></div>
+    <div id="content"></div>
+    
+    <script>
+        var content = document.getElementById("content")
+        function getUsers() {
+            var request = new XMLHttpRequest()
+    
+            request.open("GET", "http://localhost:5000/api/v1/users")
+            request.onload = function () {
+                var data = JSON.parse(this.response)
+                //document.write(Object.keys(data.Courses))
+                var keys = Object.keys(data.Courses)
+    
+                content.innerHTML = ""
+                keys.forEach((key, index) => {
+                    //document.writeln(data[key])
+                    var innerkeys = Object.keys(data.Courses[key])
+                    content.innerHTML += "<p>"
+                    innerkeys.forEach((key2, index2) => {
+                        content.innerHTML += key2 + ":" + data.Courses[key][key2] + ((key2 == "FirstName")?" [" + key +"]":"") + "<br/>"
+                    })
+                    
+                    content.innerHTML += "<button onclick=\"javascript:updateUser(\'" + key + "\',\'"+ data.Courses[key]["FirstName"] +"\',"+ data.Courses[key]["LastName"]+","+data.Courses[key]["MobileNo"]+","+data.Courses[key]["Email"]+")\">Update "+ key + "</button>"
+                    content.innerHTML += "<button onclick=\"javascript:delUser(\'" + key + "\')\">Delete "+ key + "</button>"
+                    content.innerHTML += "</p>"
+                })
+            }
+            request.send()
+        }
+    
+        function createUser() {
+            content.innerHTML = "<form onsubmit=\"return postUser()\">" +
+                "ID: <input type=\"text\" id=\"id\"/><br/>" +
+                "FirstName: <input type=\"text\" id=\"firstname\"/><br/>" +
+                "LastName: <input type=\"text\" id=\"lastname\"/><br/>" +
+                "MobileNo: <input type=\"number\" id=\"mobileno\"/><br/>" +
+                "Email: <input type=\"number\" id=\"email\"/><br/>" +
+                "<button>Create</button></form>"
+        }
+    
+        function postUser() {
+            var request = new XMLHttpRequest()
+            const id = document.getElementById("id").value
+            request.open("POST", "http://localhost:5000/api/v1/users/"+id)
+    
+            const json = {
+                "FirstName": document.getElementById("firstname").value,
+                "LastName": document.getElementById("lastname").value,
+                "mobileno": parseInt(document.getElementById("mobileno").value),
+                "email": document.getElementById("email").value,
+            }
+    
+            request.onload = function() {
+    
+                if (request.status == 202)
+                {
+                    content.innerHTML = "User " + id + " created successfully"
+                } else if (request.status == 409) 
+                {
+                    content.innerHTML = "Error - user "+ id + " exists"
+                }
+            }
+            request.send(JSON.stringify(json))
+            
+            return false
+        }
+    
+        function putUser() {
+            var request = new XMLHttpRequest()
+            const id = document.getElementById("id").value
+            request.open("PUT", "http://localhost:5000/api/v1/users/"+id)
+    
+            const json = {
+                "FirstName": document.getElementById("firstname").value,
+                "LastName": parseInt(document.getElementById("lastname").value),
+                "MobileNo": parseInt(document.getElementById("mobileno").value),
+                "Email": document.getElementById("email").value,
+            }
+    
+            request.onload = function() {
+    
+                if (request.status == 202)
+                {
+                    content.innerHTML = "User " + id + " updated successfully"
+                } else if (request.status == 404) 
+                {
+                    content.innerHTML = "Error - user "+ id + " does not exist"
+                }
+            }
+            request.send(JSON.stringify(json))
+            
+            return false
+        }
+    
+        function delUser(id) {
+            var request = new XMLHttpRequest()
+            request.open("DELETE", "http://localhost:5000/api/v1/users/"+id)
+    
+            request.onload = function() {
+    
+                if (request.status == 200)
+                {
+                    content.innerHTML = "User " + id + " deleted successfully"
+                } else if (request.status == 404) 
+                {
+                    content.innerHTML = "Error - user "+ id + " does not exists"
+                }
+            }
+            request.send()
+        }
+
+        function updateUser(userid, firstname, lastname, mobileno, email){
+            content.innerHTML = "<form onsubmit=\"return putCourse()\">" +
+                "ID: " + id + "<input type=\"hidden\" id=\"userid\" value=\"" + userid + "\"/><br/>" +
+                "First Name: <input type=\"text\" id=\"firstname\" value=\""+ firstname +"\"/><br/>" +
+                "Last Name: <input type=\"text\" id=\"lastname\" value=\""+ lastname +"\"/><br/>" +
+                "Mobile Number: <input type=\"text\" id=\"mobileno\" value=\""+ mobileno +"\"/><br/>" +
+                "Email: <input type=\"text\" id=\"email\" value=\""+ email +"\"/><br/>"
+                "<button>Update</button></form>"
+        }
+        //Drivers
+        function createDriver() {
+            content.innerHTML = "<form onsubmit=\"return postUser()\">" +
+                "ID: <input type=\"text\" id=\"id\"/><br/>" +
+                "FirstName: <input type=\"text\" id=\"firstname\"/><br/>" +
+                "LastName: <input type=\"text\" id=\"lastname\"/><br/>" +
+                "MobileNo: <input type=\"number\" id=\"mobileno\"/><br/>" +
+                "Email: <input type=\"number\" id=\"email\"/><br/>" +
+                "VehicleNo: <input type=\"vehicleno\" id=\"vehicleno\"/><br/>" +
+                "LicenseNo: <input type=\"licenseno\" id=\"licenseno\"/><br/>" +
+                "<button>Create</button></form>"
+        }
+    
+        function postDriver() {
+            var request = new XMLHttpRequest()
+            const id = document.getElementById("id").value
+            request.open("POST", "http://localhost:5000/api/v1/drivers/"+id)
+    
+            const json = {
+                "FirstName": document.getElementById("firstname").value,
+                "LastName": document.getElementById("lastname").value,
+                "mobileno": parseInt(document.getElementById("mobileno").value),
+                "email": document.getElementById("email").value,
+                "VehicleNo": document.getElementById("VehicleNo").value,
+                "LicenseNo": document.getElementById("LicenseNo").value,
+            }
+    
+            request.onload = function() {
+    
+                if (request.status == 202)
+                {
+                    content.innerHTML = "Driver " + driverid + " created successfully"
+                } else if (request.status == 409) 
+                {
+                    content.innerHTML = "Error - driver "+ driverid + " exists"
+                }
+            }
+            request.send(JSON.stringify(json))
+            
+            return false
+        }
+    
+        function putDriver() {
+            var request = new XMLHttpRequest()
+            const id = document.getElementById("id").value
+            request.open("PUT", "http://localhost:5000/api/v1/users/"+id)
+    
+            const json = {
+                "FirstName": document.getElementById("firstname").value,
+                "LastName": document.getElementById("lastname").value,
+                "MobileNo": document.getElementById("mobileno").value,
+                "Email": document.getElementById("Email").value,
+                "VehicleNo": document.getElementById("vehicleno").value,
+                "LicenseNo": document.getElementById("licenseno").value,
+
+            }
+    
+            request.onload = function() {
+    
+                if (request.status == 202)
+                {
+                    content.innerHTML = "Driver " + driverid + " updated successfully"
+                } else if (request.status == 404) 
+                {
+                    content.innerHTML = "Error - driver "+ driverid + " does not exist"
+                }
+            }
+            request.send(JSON.stringify(json))
+            
+            return false
+        }
+    
+        function delDriver(id) {
+            var request = new XMLHttpRequest()
+            request.open("DELETE", "http://localhost:5000/api/v1/drivers/"+id)
+    
+            request.onload = function() {
+    
+                if (request.status == 200)
+                {
+                    content.innerHTML = "Driver " + id + " deleted successfully"
+                } else if (request.status == 404) 
+                {
+                    content.innerHTML = "Error - Driver "+ id + " does not exists"
+                }
+            }
+            request.send()
+        }
+    
+        function updateDriver(userid, firstname, lastname, mobileno, email){
+            content.innerHTML = "<form onsubmit=\"return putCourse()\">" +
+                "ID: " + id + "<input type=\"hidden\" id=\"driverid\" value=\"" + userid + "\"/><br/>" +
+                "First Name: <input type=\"text\" id=\"firstname\" value=\""+ firstname +"\"/><br/>" +
+                "Last Name: <input type=\"text\" id=\"lastname\" value=\""+ lastname +"\"/><br/>" +
+                "Mobile Number: <input type=\"text\" id=\"mobileno\" value=\""+ mobileno +"\"/><br/>" +
+                "Email: <input type=\"text\" id=\"email\" value=\""+ email +"\"/><br/>"+
+                "VehicleNo: <input type=\"text\" id=\"vehicleno\" value=\""+ vehicleno +"\"/><br/>"+
+                "LicenseNo: <input type=\"text\" id=\"licenseno\" value=\""+ licenseno +"\"/><br/>"
+                "<button>Update</button></form>"
+        }
+    </script>

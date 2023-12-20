@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -26,8 +25,7 @@ type Driver struct {
 
 func main() {
 	router := mux.NewRouter()
-	router.HandleFunc("/api/v1/", home)
-	router.HandleFunc("/api/v1/user", newUser).Methods("GET", "DELETE", "POST", "PATCH", "PUT", "OPTIONS")
+	router.HandleFunc("/api/v1/drivers {driverid}", driver).Methods("GET", "DELETE", "POST", "PATCH", "PUT", "OPTIONS")
 	//Driver
 	router.HandleFunc("/api/v1/driver", Driver)
 	fmt.Println("Listening at port 5001")
@@ -53,25 +51,12 @@ func GetData(db *sql.DB) {
 	}
 }
 
-func newDriver(w http.ResponseWriter, r *http.Request) {
-	var respond Driver
-	body, _ := io.ReadAll(r.Body) //from http.Request
-	err := json.Unmarshal(body, &respond)
-	fmt.Printf("First Name: %s", respond.FirstName)
-	fmt.Printf("Last Name: %s", respond.LastName)
-	fmt.Printf("Mobile Number: %s", respond.MobileNo)
-	fmt.Printf("Email: %s", respond.Email)
-	fmt.Printf("License Number: %s", respond.LicenseNo)
-	fmt.Printf("Vehicle Number: %s", respond.VehicleNo)
-	fmt.Printf(err.Error())
-}
-
-func driver(w http.ResponseWriter, r *http.Request) {
+func drivers(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
 	if r.Method == "POST" {
 		if body, err := ioutil.ReadAll(r.Body); err == nil {
-			var data User
+			var data Driver
 
 			if err := json.Unmarshal(body, &data); err == nil {
 				if _, ok := drivers[params["driverid"]]; !ok {
@@ -129,7 +114,7 @@ func driver(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusAccepted)
 				} else {
 					w.WriteHeader(http.StatusNotFound)
-					fmt.Fprintf(w, "Course ID does not exist")
+					fmt.Fprintf(w, "Driver ID does not exist")
 				}
 			} else {
 				fmt.Println(err)

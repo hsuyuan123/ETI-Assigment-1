@@ -2,7 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 
@@ -54,10 +57,145 @@ func newTrip(id string, t Trip, u User, d Driver) {
 }
 
 func updateTrip(id string, t Trip) {
-	_, err := db.Exec("update course set name=?, intake=?, mingpa=?, maxgpa=? where id=?", t.PickupLoc, t.AltPickupLoc, t.StartTravelTime, t.DestAddress, t.NoOfPsgr, id)
+	_, err := db.Exec("update trip set pickuploc=?, intake=?, altpickuploc=?, starttraveltime=?, destaddress = ?, noofpsgr = ? where tripid=?", t.PickupLoc, t.AltPickupLoc, t.StartTravelTime, t.DestAddress, t.NoOfPsgr, t.TripID)
 	if err != nil {
 		panic(err.Error())
 	}
 }
 
-//Enroll by changing userid of trip to id of current logged in user
+func trip(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+
+	if r.Method == "POST" {
+		if body, err := ioutil.ReadAll(r.Body); err == nil {
+			var data Trip
+			fmt.Println(string(body))
+			if err := json.Unmarshal(body, &data); err == nil {
+				if _, ok := isExist(params["tripid"]); !ok {
+					fmt.Println(data)
+					//courses[params["courseid"]] = data
+					insertTrip(params["tripid"], data)
+
+					w.WriteHeader(http.StatusAccepted)
+				} else {
+					w.WriteHeader(http.StatusConflict)
+					fmt.Fprintf(w, "Trip ID exist")
+				}
+			} else {
+				fmt.Println(err)
+			}
+		}
+	} else if r.Method == "PUT" {
+		if body, err := ioutil.ReadAll(r.Body); err == nil {
+			var data Trip
+
+			if err := json.Unmarshal(body, &data); err == nil {
+				if _, ok := isExist(params["tripid"]); ok {
+					fmt.Println(data)
+					//courses[params["courseid"]] = data
+					updateTrip(params["tripid"], data)
+					w.WriteHeader(http.StatusAccepted)
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+					fmt.Fprintf(w, "Trip ID does not exist")
+				}
+			} else {
+				fmt.Println(err)
+			}
+		}
+	} else if r.Method == "PATCH" {
+		if body, err := ioutil.ReadAll(r.Body); err == nil {
+			var data map[string]interface{}
+
+			if err := json.Unmarshal(body, &data); err == nil {
+				if orig, ok := isExist(params["tripid"]); ok {
+					fmt.Println(data)
+
+					for k, v := range data {
+						switch k {
+						case "PickupLoc":
+							orig.Name = v.(string)
+						case "AltPickupLoc":
+							orig.Intake = v.(float64)
+						case "StartTravelTime":
+							orig.MinGPA = time(v.(float64))
+						case "DestAddress":
+							orig.DestAddress = v.(float64)
+						case "NoOfPsgr":
+							orig.NoOfPsgr = int(v.(float64))
+						}
+						}
+						
+					}
+					updateTrip(params["tripid"], orig)
+					w.WriteHeader(http.StatusAccepted)
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+					fmt.Fprintf(w, "Trip ID does not exist")
+				}
+			} else {
+				fmt.Println(err)
+			}
+		}
+	} else if val, ok := isExist(params["tripid"]); ok {
+		if r.Method == "DELETE" {
+			fmt.Fprintf(w, params["tripid"]+" Deleted")
+			delCourse(params["tripid"])
+		} else {
+			json.NewEncoder(w).Encode(val)
+		}
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "Invalid Trip ID")
+	}
+}
+func alltrips(w http.ResponseWriter, r *http.Request) {
+
+	query := r.URL.Query()
+
+	found := false
+	results := map[string]Trip{}
+
+	if value := query.Get("q"); len(value) > 0 {
+		for k, v := range trips {
+			if strings.Contains(strings.ToLower(v.tripid), strings.ToLower(value)) {
+				results[k] = v
+				found = true
+			}
+		}
+
+		if !found {
+			fmt.Fprintf(w, "No trips found")
+		} else {
+			json.NewEncoder(w).Encode(struct {
+				Results map[string]User `json:"Search Results"`
+			}{results})
+		}
+	} else if value = query.Get("starttraveltime"); len(value) > 0 {
+		found := false
+		results := map[string]User{}
+		starttraveltime, _ := strconv.Atoi(value)
+
+		for k, v := range trip {
+			//Check for 30 mins
+			if time.Now.Sub(time.starttraveltime) => 30 {
+				results[k] = v
+				found = true
+			}
+		}
+
+		if !found {
+			fmt.Fprintf(w, "No trip eligible to enroll")
+		} else {
+			json.NewEncoder(w).Encode(struct {
+				Results map[string]Course `json:"Eligible trip(s)"`
+			}{results})
+		}
+	} else {
+		tripsWrapper := struct {
+			Trips map[string]Trip `json:"Trips"`
+		}{trips}
+		json.NewEncoder(w).Encode(tripsWrapper)
+		return
+	}
+}
