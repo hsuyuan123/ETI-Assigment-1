@@ -46,6 +46,32 @@ func main() {
 	log.Fatal(http.ListenAndServe(":5002", router))
 }
 
+func insertUser(userid string, u User) {
+	u.AccStatus = "active"
+	_, err := db.Exec("insert into user values(?,?,?,?,?)", userid, u.FirstName, u.LastName, u.MobileNo, u.Email, u.AccStatus)
+	if err != nil {
+		panic(err.Error())
+	}
+}
+
+func updateUser(userid string, u User) {
+	_, err := db.Exec("update user set firstname=?, lastname=?, mobileno=?, email=? where id=?", u.FirstName, u.LastName, u.MobileNo, u.Email, userid)
+	if err != nil {
+		panic(err.Error())
+	}
+}
+
+/*func deleteUser(userid string) (int64, error) {
+	result, err := db.Exec("delete from course where id=?", userid)
+	//u.accstatus = "inactive"
+	//Update account status
+	//_, err := db.Exec("update user set accstatus=? where id=?", u.accstatus, userid)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}*/
+
 func users(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
@@ -119,7 +145,7 @@ func users(w http.ResponseWriter, r *http.Request) {
 	} else if val, ok := isExist[params["userid"]]; ok {
 		if r.Method == "DELETE" {
 			fmt.Fprintf(w, params["userid"]+" Deleted")
-			delete(users, params["userid"])
+			delete(user, params["userid"])
 		} else {
 			json.NewEncoder(w).Encode(val)
 		}
@@ -127,61 +153,4 @@ func users(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "Invalid User ID")
 	}
-
-}
-
-func getUsers() map[string]User {
-	results, err := db.Query("select * from User")
-	if err != nil {
-		panic(err.Error())
-	}
-
-	var users map[string]User = map[string]User{}
-
-	for results.Next() {
-		var u User
-		var id string
-		err = results.Scan(&id, &u.FirstName, &u.LastName, &u.MobileNo, &u.Email)
-		if err != nil {
-			panic(err.Error())
-		}
-
-		users[id] = u
-	}
-
-	return users
-}
-
-func insertUser(userid string, u User) {
-	u.AccStatus = "active"
-	_, err := db.Exec("insert into user values(?,?,?,?,?)", userid, u.FirstName, u.LastName, u.MobileNo, u.Email, u.AccStatus)
-	if err != nil {
-		panic(err.Error())
-	}
-}
-func updateUser(userid string, u User) {
-	_, err := db.Exec("update user set firstname=?, lastname=?, mobileno=?, email=? where userid=?", u.FirstName, u.LastName, u.MobileNo, u.Email, userid)
-	if err != nil {
-		panic(err.Error())
-	}
-}
-
-func isExist(userid string) (User, bool) {
-	var u User
-
-	result := db.QueryRow("select * from user where userid=?", userid)
-	err := result.Scan(&userid, &u.FirstName, &u.LastName, &u.MobileNo, &u.Email)
-	if err == sql.ErrNoRows {
-		return u, false
-	}
-
-	return u, true
-}
-
-func delUser(userid string) (int64, error) {
-	result, err := db.Exec("delete from user where userid=?", userid)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
 }

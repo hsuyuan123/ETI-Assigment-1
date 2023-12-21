@@ -24,6 +24,12 @@ type Driver struct {
 }
 
 func main() {
+	db, err = sql.Open("mysql", "user1:password@tcp(127.0.0.1:3306)/my_db")
+
+	if err != nil {
+		panic(err.Error())
+	}
+	//defer db.Close()
 	router := mux.NewRouter()
 	router.HandleFunc("/api/v1/drivers {driverid}", driver).Methods("GET", "DELETE", "POST", "PATCH", "PUT", "OPTIONS")
 	//Driver
@@ -107,6 +113,10 @@ func drivers(w http.ResponseWriter, r *http.Request) {
 						case "Mobile No":
 							orig.MobileNo = int(v.(float64))
 						case "Email":
+							orig.Email = v.(string)
+						case "VehicleNo":
+							orig.Email = v.(string)
+						case "LicenseNo":
 							orig.Email = v.(string)
 						}
 					}

@@ -15,7 +15,7 @@ import (
 
 // Link to user and driver
 func main() {
-	db, err = sql.Open("mysql", "user:password@tcp(127.0.0.1:3306)/db")
+	db, err = sql.Open("mysql", "user1:password@tcp(127.0.0.1:3306)/my_db")
 
 	if err != nil {
 		panic(err.Error())
