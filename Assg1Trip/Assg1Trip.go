@@ -46,21 +46,17 @@ type Trip struct {
 	DestAddress     string `json:"DestAddress"`
 	NoOfPsgr        string `json:"NoOfPsgr"`
 	TripStatus      string `json:"TripStatus"`
-	CustomerID      string `json:"CustomerID"`
+	UserId      string `json:"UserId"`
 }
 
-func newTrip(id string, t Trip, u User, d Driver) {
-	_, err := db.Exec("insert into trip values(?,?,?,?,?)", id, d.DriverId, t.PickupLoc, t.AltPickupLoc, t.StartTravelTime, t.DestAddress, t.NoOfPsgr, t.TripStatus, u.UserId)
-	if err != nil {
-		panic(err.Error())
-	}
-}
 
-func updateTrip(id string, t Trip) {
-	_, err := db.Exec("update trip set pickuploc=?, intake=?, altpickuploc=?, starttraveltime=?, destaddress = ?, noofpsgr = ? where tripid=?", t.PickupLoc, t.AltPickupLoc, t.StartTravelTime, t.DestAddress, t.NoOfPsgr, t.TripID)
+
+func delUser(userid string) (int64, error) {
+	result, err := db.Exec("delete from user where userid=?", userid)
 	if err != nil {
-		panic(err.Error())
+		return 0, err
 	}
+	return result.RowsAffected()
 }
 
 func trip(w http.ResponseWriter, r *http.Request) {
@@ -197,5 +193,53 @@ func alltrips(w http.ResponseWriter, r *http.Request) {
 		}{trips}
 		json.NewEncoder(w).Encode(tripsWrapper)
 		return
+	}
+
+	func getTrips() map[string]Trip {
+		results, err := db.Query("select * from Trip")
+		if err != nil {
+			panic(err.Error())
+		}
+	
+		var trips map[string]Trip = map[string]Trip{}
+	
+		for results.Next() {
+			var t Trips
+			var id string
+			err = results.Scan(&id, &d.DriverId, &t.PickupLoc, &t.AltPickupLoc, &t.StartTravelTime, &t.DestAddress, &t.NoOfPsgr, &u.UserId)
+			if err != nil {
+				panic(err.Error())
+			}
+	
+			trips[id] = t
+		}
+	
+		return trips
+	}
+
+	func newTrip(id string, t Trip, u User, d Driver) {
+		_, err := db.Exec("insert into trip values(?,?,?,?,?)", id, d.DriverId, t.PickupLoc, t.AltPickupLoc, t.StartTravelTime, t.DestAddress, t.NoOfPsgr, t.TripStatus, u.UserId)
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+	
+	func updateTrip(id string, t Trip) {
+		_, err := db.Exec("update trip set pickuploc=?, intake=?, altpickuploc=?, starttraveltime=?, destaddress = ?, noofpsgr = ?, tripstatus = ? where tripid=?", t.PickupLoc, t.AltPickupLoc, t.StartTravelTime, t.DestAddress, t.NoOfPsgr, t.TripStatus t.TripID)
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+	
+	func isExist(tripid string) (Trip, bool) {
+		var t Trip
+	
+		result := db.QueryRow("select * from trip where tripid=?", tripid)
+		err := result.Scan(&tripid, &d.DriverId, &t.PickupLoc, &t.AltPickupLoc, &t.StartTravelTime, &t.DestAddress, &t.NoOfPsgr, &t.TripStatus, &u.UserId)
+		if err == sql.ErrNoRows {
+			return u, false
+		}
+	
+		return u, true
 	}
 }
